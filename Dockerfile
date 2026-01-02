@@ -1,11 +1,12 @@
-# 1. Java 17 버전 환경 사용
-FROM openjdk:17-jdk-slim
+# 1. Base Image: Java 23 (안정적인 Eclipse Temurin 버전 사용)
+FROM eclipse-temurin:23-jdk
 
 # 2. 작업 폴더 설정
 WORKDIR /app
 
-# 3. 빌드된 jar 파일 복사 (build/libs 안에 생성될 jar 파일을 app.jar로 복사)
-COPY build/libs/*SNAPSHOT.jar app.jar
+# 3. 빌드된 JAR 파일을 도커 내부로 복사
+# (build/libs 폴더 안에 있는 jar 파일을 app.jar라는 이름으로 복사)
+COPY build/libs/*.jar app.jar
 
-# 4. 실행 명령어 (환경 변수는 실행 시점에 주입받음)
+# 4. 실행 명령어 (스프링 부트 실행)
 ENTRYPOINT ["java", "-jar", "app.jar"]
