@@ -67,4 +67,4 @@ jobs:
             # 안 쓰는 이미지 정리 (용량 확보)
             sudo docker image prune -f
             
-            
+        
