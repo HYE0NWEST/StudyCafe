@@ -1,16 +1,13 @@
-### 1. 빌드 결과물 (필수) ###
-# 빌드할 때 생기는 임시 파일들이라 깃허브에 올리면 안 됩니다.
+### 1. 빌드 결과물  ###
 .gradle
 build/
 out/
 bin/
 
-### 2. Gradle 래퍼 (이건 꼭 있어야 함!) ###
-# 아래 파일은 깃허브에 올라가야 다른 사람도 빌드를 할 수 있습니다.
+### 2. Gradle 래퍼  ###
 !gradle/wrapper/gradle-wrapper.jar
 
-### 3. IDE 설정 파일 (충돌 방지) ###
-# IntelliJ나 Eclipse 설정 파일은 사람마다 다르니 빼는 게 좋습니다.
+### 3. IDE 설정 파일 ###
 .idea/
 *.iml
 *.iws
@@ -22,16 +19,13 @@ bin/
 .springBeans
 .sts4-cache
 
-### 4. 시스템 파일 (잡동사니) ###
+### 4. 시스템 파일###
 .DS_Store
 Thumbs.db
 
 ### 5. 로그 파일 ###
 *.log
 
-### 6. ★ 보안 관련 (가장 중요) ★ ###
-# 실수로 비밀번호가 적힌 파일이 올라가지 않도록 주의해야 합니다.
-# application.properties에 진짜 비밀번호(예: 1234)가 적혀 있다면
-# 아래 줄의 주석(#)을 제거해서 깃허브에 안 올라가게 막으세요.
+### 6. 보안###
 src/main/resources/application.properties
 src/main/resources/application.yml
