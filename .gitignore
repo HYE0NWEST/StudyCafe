@@ -1,13 +1,15 @@
-### 1. 빌드 결과물  ###
-.gradle
+### 1. 빌드 및 컴파일 결과물 ###
+.gradle/
 build/
 out/
 bin/
+*.class
 
-### 2. Gradle 래퍼  ###
+### 2. Gradle 래퍼 (협업을 위해 jar는 포함하되 나머지는 무시) ###
+gradle/wrapper/gradle-wrapper.properties
 !gradle/wrapper/gradle-wrapper.jar
 
-### 3. IDE 설정 파일 ###
+### 3. IDE 설정 파일 (중요: 여기서 .idea를 막아줌) ###
 .idea/
 *.iml
 *.iws
@@ -19,9 +21,15 @@ bin/
 .springBeans
 .sts4-cache
 
-### 4. 시스템 파일###
+### 4. 시스템 파일 (맥/윈도우 자동 생성 파일) ###
 .DS_Store
 Thumbs.db
 
-### 5. 로그 파일 ###
+### 5. 로그 및 임시 파일 ###
 *.log
+*.bak
+*.tmp
+
+### 6. 보안 및 환경설정 파일 (혹시 모를 실수 방지) ###
+.env
+secrets.properties
