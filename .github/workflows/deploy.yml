@@ -24,13 +24,14 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
+        # 테스트 제외하고 빌드
         run: ./gradlew clean build -x test
 
-      # 4-1. Docker buildx 설정
+      # 4-1. Docker buildx 설정 (최신 빌드 도구)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 4-2. Docker 이미지 빌드 및 푸시 (★수정됨: 한 줄로 변경하여 에러 원천 차단)
+      # 4-2. Docker 이미지 빌드 및 푸시 (★수정됨: 에러 방지를 위해 한 줄로 작성)
       - name: Build & Push Docker Image
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
@@ -44,15 +45,14 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
-            # 최신 이미지 받기 (태그 명시)
+            # 최신 이미지 받기
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/studycafe-app:latest
             
             # 기존 서버 멈추고 삭제 (없으면 에러 무시)
             sudo docker stop studycafe-server || true
             sudo docker rm studycafe-server || true
             
-            # 새 서버 실행
-            # --network="host" : EC2 네트워크 사용
+            # 새 서버 실행 (--network="host" 사용)
             sudo docker run -d --name studycafe-server \
               --network="host" \
               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
