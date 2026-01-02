@@ -33,3 +33,4 @@ Thumbs.db
 ### 6. 보안 및 환경설정 파일 (혹시 모를 실수 방지) ###
 .env
 secrets.properties
+.cache_ggshield
