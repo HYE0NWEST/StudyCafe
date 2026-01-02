@@ -1,5 +1,5 @@
 # 1. Base Image: Java 23 (안정적인 Eclipse Temurin 버전 사용)
-FROM eclipse-temurin:23-jdk
+FROM eclipse-temurin:17-jdk
 
 # 2. 작업 폴더 설정
 WORKDIR /app
