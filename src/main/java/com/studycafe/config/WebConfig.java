@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+/*
 @Configuration // 설정파일로 스프링이 켜질때 실행
 public class WebConfig implements WebMvcConfigurer {
     @Override
@@ -19,13 +20,12 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowCredentials(true);
     }
 }
-/*
+
 .addMapping("/**")
 우리 서버의 모든 URL에 대해 이 규칙 적용(/**은 모든 경로를 포함)
 
-.allowedOrigins("http://localhost:5173", "http://localhost:3000")
-이 URL에서 오는 요청만 받기
-5173은 vue.js에서 3000은 react에서 주로 사용하는 기본 포트
+.allowedOriginPatterns("*")
+모든 패턴의 URL 허용
 
 .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
 이 방식의 요청만 허용함(조회,저장,수정,삭제)
