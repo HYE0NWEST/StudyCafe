@@ -22,5 +22,5 @@ spring:
 
 jwt:
   # 환경변수 JWT_SECRET이 있으면 그걸 쓰고, 없으면 뒤에 있는 임시값을 씁니다.
-  secret: ${JWT_SECRET:temporary-key-for-local-test}
+  secret: ${JWT_SECRET:temporary-key-for-local-test-123456789}
   access-token-validity-in-seconds: 1800 # 30분 (60초 * 30분)

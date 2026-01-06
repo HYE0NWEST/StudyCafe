@@ -16,6 +16,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Arrays;
 import java.util.List;
@@ -25,6 +27,21 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    /* 비밀번호 암호화 장치
+       PasswordEncoder : 스프링 시큐리티가 제공하는 비밀번호 암호화 인터페이스
+       BCryptPasswordEncoder : 강력한 해싱 알고리즘인 BCrypt를 사용한 암호화 인트페이스
+
+       현재 이 코드가 없다면 DB에 비밀번호가 그대로 저장되어 위험성이 존재함
+       이 코드가 존재한다면 알 수 없는 언어로 비밀번호가 암호화됨
+
+       SecurityConfig는 가장 먼저 설정되는 곳이므로 암호화 도구를 미리 저장함
+       @Bean으로 설정하여 어디서든 생성자 주입 또는 @Autowired로 사용 가능
+     */
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 

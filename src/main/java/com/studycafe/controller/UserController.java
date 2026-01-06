@@ -70,7 +70,7 @@ public class UserController {
 
         User user = new User(
                 request.getUsername(),
-                request.getPassword(),
+                passwordEncoder.encode(request.getPassword()),
                 request.getEmail()
         );
 

@@ -120,13 +120,22 @@ Redis에서 해당 좌석의 키가 즉시 삭제되어 다른 사용자가 즉�
      */
 
     @GetMapping("/my-seat")
-    public ResponseEntity<Integer> getMySeat(@RequestParam Long userId) {
-        Integer seatNumber = reservationService.getCurrentSeatNumber(userId);
+    public ResponseEntity<Integer> getMySeat(
+            @org
+                    .springframework
+                    .security
+                    .core
+                    .annotation
+                    .AuthenticationPrincipal String userId) {
+        Integer seatNumber = reservationService.getCurrentSeatNumber(Long.parseLong(userId));
         return ResponseEntity.ok(seatNumber);
     }
     /* 이 유저의 좌석 번호를 알아보게 하는 역할
-        reservationService의 getCurrentSeatNumber 메서드를 호출
-        getCurrentSeatNumber 메서드는 현재 이용자의 좌석 번호를 반환
+        @AuthenticationPrincipal은 누구인지 묻는역할을 수행함, jwtAuthenticationFilter가
+        토큰을 검사해서 저장해둔 인증 도장(SecurityContext)를 보고 userId를 알아내고 String userId에
+        저장
+        reservationService의 getCurrentSeatNumber 메서드에 문자열 userId를 Long타입으로 변경 후
+        매개변수에 넣어서 seatNumber(현재 좌석 번호)를 반환받음
         현재 좌석 번호와 함께 200OK를 반환
      */
 }
