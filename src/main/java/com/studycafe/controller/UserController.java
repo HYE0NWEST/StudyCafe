@@ -4,12 +4,15 @@ import com.studycafe.domain.user.User;
 import com.studycafe.domain.user.UserRepository;
 import com.studycafe.dto.LoginDto;
 import com.studycafe.dto.SignupRequest;
+import io.jsonwebtoken.Jwt;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.studycafe.config.jwt.JwtTokenProvider;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,33 +22,44 @@ import java.util.Map;
 @RequiredArgsConstructor // final이 붙은 필드 생성자 생성
 public class UserController {
     private final UserRepository userRepository; // 의존성 주입
+    private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login (@RequestBody LoginDto loginDto) {
         User user = userRepository.findByUsername(loginDto.getUsername())
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 아이디"));
 
-        if(!user.getPassword().equals(loginDto.getPassword())) {
+        if(!passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
             throw new RuntimeException("비밀번호가 일치하지 않음");
         }
 
+        String token = jwtTokenProvider.createToken(String.valueOf(user.getId()));
+
         Map<String, Object> response = new HashMap<>();
-        response.put("userId", user.getId());
+
         response.put("username", user.getUsername());
+        response.put("token", token);
 
         return ResponseEntity.ok(response);
     }
     /* 로그인 구현(로그인 성공 시 아이디 + 닉네임 형태로 반환)
-    Key,value형태로된 Map을 사용하여 userId가 key, 닉네임(username)이 value로 설정
+    사용자가 보낸 정보(ID/PW)인 JSON 문자열을 @RequestBody가 LoginDto로 DTO 객체로 변환
 
-    ResponseEntity<Map<String,Object>>이 반환타입이 되고
-    사용자로부터 받은 데이터를 @RequestBody를 통해 LoginDto 객체로 반환하고 user에 저장
+    userRepository의 findByUsername메서드를 DTO 객체의 Username을 매개변수로 하여 DB에서 유저 조회
+    만약 유저 없으면 RuntimeException 발생
 
-    userRepository.findByUsername으로 DB에서 사람을 찾고 비밀번호가 맞는지 확인
+    loginDto.getPassword()는 사용자가 입력한 PW이고 user.getPassword()는 DB에 저장된 암호화된 PW
+    passwordEncoder.matches()는 내부적으로 사용자가 입력한 PW를 암호화해보고
+    그 결과가 DB에 있는 암호화된 값과 같은지 확인하고 아니면 RuntimeException 발생
 
-    새로운 HashMap response를 생성하여 user에서 userId,username을 받아서
-    Map인 response에 저장하고 이를 ResponseEntity.ok상태와 함께 반환
+    유저의 기본키(ID)를 가지고 jwtTokenProvider의 createToken메서드를 호출해서 토큰 객체 생성
 
+    응답 데이터를 담을 HashMap객체를 생성하고 response.put()으로 키와 값을 넣음
+    key : "username", value : 유저 아이디
+    key : "token", value : 방금 만든 JWT 토큰
+
+    200 OK와 함께 Map 객체 반환
      */
 
     @PostMapping("/signup")

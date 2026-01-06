@@ -63,6 +63,7 @@ jobs:
             sudo docker run -d --name studycafe-server \
               --network host \
               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+              -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
               ${{ secrets.DOCKER_USERNAME }}/studycafe-app:latest
 
             sudo docker image prune -f
