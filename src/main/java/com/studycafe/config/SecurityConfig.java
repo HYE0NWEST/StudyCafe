@@ -47,6 +47,8 @@ public class SecurityConfig {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // CORS 규칙 적용
+
                 .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화
                 .formLogin(AbstractHttpConfigurer::disable) // 폼 로그인 비활성화
                 .httpBasic(AbstractHttpConfigurer::disable) // 기본 로그인 비활성화
@@ -65,6 +67,9 @@ public class SecurityConfig {
         return http.build();
     }
     /* 보안 필터 체인(규칙 묶음)을 Bean으로 등록하여 적용(http 객체에 설정 적용)
+       0. 내가 만든 CORS 규칙 적용
+       밑에서 만든 @Bean으로 corsConfigurationSource()를 스프링 시큐리티에게 적용
+
        1. 기억 삭제(원래 규칙 삭제)
         CSRF 보호, 폼 로그인, 기본 로그인을 모두 비활성화(웹사이트가 아닌 API 서버를 생성하기 위함)
 
