@@ -83,6 +83,7 @@ public class SecurityConfig {
        authorizeHttpRequests는 URL 주소별로 누가 들어갈 수 있는지 규칙을 정하는 것
        auth의 requestMatchers("/api/auth/**")은 /api/auth/로 시작하는 URL의 모든 요청은
        검사하지 말고 모두 통과(permitAll)
+       추가로 swagger-ui, swagger-resources 로 시작하는 요청도 통과
        그러나 이 이외의 URL의 요청(anyRequest())은 인증 도장이 있는 사람만 통과(authenticated)
        >> 허락없이 /api/auth/에 접근하면 에러를 내보냄(403 forbidden)
 
