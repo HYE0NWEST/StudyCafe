@@ -12,9 +12,22 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users") // 테이블 이름 지정(예약어인 user를 피해서 지음)
 @Getter // 모든 필드에 대한 getId()같은 메서드 생성
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // 기본 생성자 생성
+@Table(
+        name = "users",
+        indexes = @Index(
+                name = "idx_username",
+                columnList = "username"
+        )
+)
+/* 인덱스 생성(검색속도 증가)
+테이블은 users 테이블로 설정
+인덱스 이름을 idx_username으로 설정하고 컬럼 기준을 username으로 설정
+만약 인덱스가 없다면 DB를 모두 뒤져야 하지만
+인덱스가 있으면 idx_username이라는 인덱스(목차)를 보면서 이미 정렬되어 있으므로
+이진 탐색 등을 통해 순식간에 아이디 위치 찾아냄
+ */
 public class User {
     @Id // 기본 키
     @GeneratedValue(strategy = GenerationType.IDENTITY)
