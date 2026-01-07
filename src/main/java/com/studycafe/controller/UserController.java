@@ -5,6 +5,7 @@ import com.studycafe.domain.user.UserRepository;
 import com.studycafe.dto.LoginDto;
 import com.studycafe.dto.SignupRequest;
 import io.jsonwebtoken.Jwt;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -66,7 +67,7 @@ public class UserController {
      */
 
     @PostMapping("/signup")
-    public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
+    public ResponseEntity<String> signup(@RequestBody @Valid SignupRequest request) {
         if(userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new CustomException(ErrorCode.DUPLICATE_USERNAME);
         }
@@ -83,6 +84,7 @@ public class UserController {
     }
     /* 사용자가 아이디, 비밀번호, 이메일을 적어서 가입
     프론트엔드에서 보낸 JSON 데이터를 @RequestBody를 통해 SignupRequest라는 자바 객체 DTO로 변환해서 받음
+    @Valid는 메서드 실행 전에 형식이 제대로 맞는지 검사를 실행
 
     if문으로 DB에게 userRepository의 findByUsername으로 아이디 가진 사람을 찾음
     결과는 Optional로 받고 만약 Optional에 isPresent로 true라면 누군가 아이디를 쓰고 있음

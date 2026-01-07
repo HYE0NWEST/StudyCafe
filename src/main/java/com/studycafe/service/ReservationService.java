@@ -11,6 +11,7 @@ import com.studycafe.domain.user.User;
 import com.studycafe.domain.user.UserRepository;
 import com.studycafe.dto.SeatStatusDto;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.studycafe.global.exception.CustomException;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor // final붙은 필드 생성자 생성
 public class ReservationService {
@@ -31,9 +33,11 @@ public class ReservationService {
     private final RedisLockService redisLockService; // 분산 락 관리
 
     public String preOccupySeat(Long userId, Integer seatNumber) {
+       log.info("좌석 선점 요청 - User: {}, Seat: {}", userId, seatNumber);
         boolean hasActive = reservationRepository
                 .existsActiveReservation(userId,LocalDateTime.now());
         if(hasActive) {
+            log.warn("선점 실패 : 이미 사용중 - User {}", userId);
             throw new CustomException(ErrorCode.SEAT_ALREADY_OCCUPIED);
         }
 
@@ -104,58 +108,62 @@ unlockSeat : Redis의 역할이  종료되었으므로 Redis를 청소하고 락
  */
 
     public List<SeatStatusDto> getAllSeatStatus() {
-        List<SeatStatusDto> statusList = new ArrayList<>();
-        // 결과를 넣을 리스트(statusList) 생성
+
+        List<Seat> allSeats = seatRepository.findAll();
 
         List<Reservation> activeReservations =
-                reservationRepository.findActiveReservations(LocalDateTime.now());
-        // DB에서 사용중(퇴실안했고 입실중인)인 좌석을 가져오기
+               reservationRepository.findActiveReservations(LocalDateTime.now());
 
-        Set<Integer> occupiedSeats = activeReservations
-                .stream()
-                .map(r -> r.getSeat().getSeatNumber())
-                .collect(Collectors.toSet());
+       Set<Integer> occupiedSeats = activeReservations
+               .stream()
+               .map(r -> r.getSeat().getSeatNumber())
+               .collect(Collectors.toSet());
 
-        for(int i = 1; i <= 100; i++) { // 100번 반복
-            String status = "AVAILABLE"; // 사용 가능 상태(빈자리)를 기본값으로 지정
-            if(occupiedSeats.contains(i)) { // DB확인
-                status = "OCCUPIED";
-            }
-            else { // Redis 확인(DB에는 없지만 Redis에 잠금키가 있는지 확인
-                if(redisLockService.getLockOwner(String.valueOf(i)) != null) {
-                    status = "LOCKED";
-                }
-            } // 최종 결정된 상태를 .add()로 리스트에 추가
-            statusList.add(new SeatStatusDto(i,status));
+       List<SeatStatusDto> statusList = new ArrayList<>();
+
+       for(Seat seat : allSeats) {
+           int seatNum = seat.getSeatNumber();
+           String status = "AVAILABLE";
+
+           if(occupiedSeats.contains(seatNum)) {
+               status = "OCCUPIED";
+           }
+           else if(redisLockService.getLockOwner(String.valueOf(seatNum)) != null) {
+               status = "LOCKED";
+           }
+           statusList.add(new SeatStatusDto(seatNum,status));
         }
         return statusList; // 상태가 저장된 리스트 리턴
     }
-    /* 스터디카페의 전체 좌석 현황판 생성
-    Set ...
-    리스트를 stream으로 펼치고 예약 객체(정보)에서 좌석 번호만 뽑아냄
-    그 후 다시 Set(집합)으로 모으기
+    /* 현재 전체 좌석 현황판, DB와 Redis를 모두 확인해서 각 좌석의 상태 종합
+    1. DB에서 정보를 가져오기
+    Seat 테이블에서 모든 좌석 정보를 가져와서 allSeats 리스트에 저장
+    Reservation 테이블에서 시작 시간과 종료 시간 사이에 지금 시간이 포함된 예약들을
+    가져와서(OCCUPIED) activeReservations 리스트에 저장
 
-    가져온 예약 정보(List<Reservation>)은 너무 무거워서 검색하기 불편함
-    List를 100번 반복문을 돌 때마다 activeReservations.contains()를 하면 리스트를 다 뒤져야 함
-    그러나 Set으로 accupiedSeats.contains()을 하면 Hash 알고리즘을 이용하여 즉시 찾음
-    Set = 내 JAVA 메모리에 잠깐 생기는 객체로서 DB에 있는 데이터를 가져와서 Set에 담은 것
-    >> 성능적으로 우수함
+    2. 사용중인 좌석 번호가 포함된 Set 생성
+    리스트를 stream(흐름)으로 바꾸고(검색 속도 향상)
+    예약 객체(r)에서 좌석번호만 뺴와서 집합(Set)으로 collect()를 사용하여 생성
 
-    가져온 예약정보에서 좌석번호(int)만 Set에 담음(DB -> JAVA 메모리)
-    Set(occupiedSeats)에는 {1,5,7}처럼 숫자만 들어있음(현재 입실 좌석 번호)
+    3. 결과를 담을 빈 리스트 생성
+    statusList라는 빈 리스트 생성
 
+    4. 모든 좌석을 1좌석씩 검사(반복문)
+    seat에서 SeatNumber를 seatNum으로 저장(좌석번호)
+    일단 기본 상태를 전 좌석 빈자리(AVAILABLE)으로 설정
 
+    만약 사용중인 좌석 Set(occupiedSeats)에 이 좌석 번호가 있는지 확인
+    만약 사용중이라면 상태를 OCCUPIED로 변경
 
-    일단 빈 자리라고 기본값으로 설정하고 시작
-    Set에 현재 좌석 번호 i가 들어있는지 확인(있다면 누군가 이용중인 것)
-    만약 i(seatNumber)가 contains라면 상태(status)를 OCCUPIED로 선언
+    만약 사용중이 아니라면 누군가 결제하려고 선점해둔 상태인지 확인
+    이때 redisLockService의 getLockOwner를 호출해서 이 좌석번호로 된 키가 있는지
+    확인하고 값이 null이 아니라면 누군가 가지고 있으므로 상태가 LOCKED로 변경됨
 
-    DB에 없으므로 이번에는 Redis를 확인
-    5분 내에 누군가 자리를 선점(prOccupySeat)을 했는지 확인(좌석번호를 String으로 변경해서 조회)
-    만약 userId가 조회된다면 누군가 결제중인 것 >> 상태(status)를 LOCKED로 선언
+    판별된 좌석 번호와 상태를 (seatNum,status)로 포장(DTO객체로 변환)해서 결과 리스트에 담음
 
-    DB(Set)에 없고 Redis에도 없다면 진짜 아무도 없는 자리이므로 AVAILABLE 사용 가능함
+    5. 완성된 전체 좌석 현황표를 프론트엔드로 전송
      */
+
 
     public void cancelPreOccupy(Integer seatNumber) {
         redisLockService.unlockSeat(String.valueOf(seatNumber)); // Redis 락 해제
