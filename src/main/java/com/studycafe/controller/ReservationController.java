@@ -3,13 +3,12 @@
  */
 package com.studycafe.controller;
 
-import ch.qos.logback.core.rolling.helper.IntegerTokenConverter;
 import com.studycafe.dto.ReservationDto;
 import com.studycafe.dto.SeatStatusDto;
 import com.studycafe.service.ReservationService;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,25 +24,20 @@ public class ReservationController {
     public ResponseEntity<String> preOccupySeat(
             @RequestBody ReservationDto.PreOccupyRequest request) {
 
-        try {
             String result = reservationService
                     .preOccupySeat(request.getUserId(), request.getSeatNumber());
             return ResponseEntity.ok(result);
-        }
-        catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
     }
     /* 좌석 선점 요청(/pre-occupy) : 사용자가 좌석을 클릭했을 때 호출되는 API
     ResponseEntity<String> : 글자와 함께 HTTP 상태코드를 같이 조절해서 보내주는 포장지 역할
     @RequestBody : 사용자가 보낸 JSON데이터 객체를 JAVA 객체(PreOccupyRequest)로 변환
 
-    try : Service에게 Redis로 가서 선점 요청을 시킴
+    Service에게 Redis로 가서 선점 요청을 시킴
     Redis에서 좌석 선점 요청을 한 결과를 result에 저장
     이때 변환된 JAVA 객체인 request에서 UserId, SeatNumber를 가져와서 매개변수에 넣음
 
     만약 성공하면 200 OK라는 Http 상태코드와 함께 결과 메시지 전송
-    만약 실패하면 400 Bad Request라는 Http 상태코드와 함께 에러 전송
+    만약 실패하면 자동으로 ExceptionHandler로 넘어감
     e.getMessage()에는 "이미 선택된 좌석입니다"라는 같은 문구가 들어감
      */
 
@@ -53,28 +47,23 @@ public class ReservationController {
     public ResponseEntity<String> confirmReservation(
             @RequestBody ReservationDto.ReserveRequest request) {
 
-        try {
             Long reservationId = reservationService.confirmReservation(
                     request.getUserId(),
                     request.getSeatNumber(),
                     request.getHours()
             );
             return ResponseEntity.ok("예약이 확정되었습니다. 예약 ID : " + reservationId);
-        }
-        catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+
     }
     /* 예약 확정 요청(/confirm) : 사용자가 결제까지 마치고 최종 확인 버튼을 눌렀을 때 호출되는 API
 ResponseEntity<String> : 글자와 함께 HTTP 상태코드를 같이 조절해서 보내주는 포장지 역할
 사용자로부터 데이터를 받고 @RequestBody로 JAVA 객체(ReserveRequest)로 변환
 
-try : Service에게 진짜 저장을 시킴(DB 저장 + Redis 락 해제)
+Service에게 진짜 저장을 시킴(DB 저장 + Redis 락 해제)
 Service에게 데이터를 진짜 DB에 INSERT하도록 지시
 
 만약 성공하면 예약 ID를 포함해서 응답 메시지 전송
-만약 실패(시간 초과, 본인이 아님)하면 에러 전송
-e.getMessage()에는 "시간이 초과되었거나 다른 사람입니다"라는 같은 문구가 들어감
+만약 실패하면 자동으로 GlobalExceptionHandler로 넘어감
  */
 
 
@@ -121,12 +110,7 @@ Redis에서 해당 좌석의 키가 즉시 삭제되어 다른 사용자가 즉�
 
     @GetMapping("/my-seat")
     public ResponseEntity<Integer> getMySeat(
-            @org
-                    .springframework
-                    .security
-                    .core
-                    .annotation
-                    .AuthenticationPrincipal String userId) {
+            @AuthenticationPrincipal String userId) {
         Integer seatNumber = reservationService.getCurrentSeatNumber(Long.parseLong(userId));
         return ResponseEntity.ok(seatNumber);
     }

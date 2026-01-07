@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.studycafe.config.jwt.JwtTokenProvider;
+import com.studycafe.global.exception.ErrorCode;
+import com.studycafe.global.exception.CustomException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,10 +30,10 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login (@RequestBody LoginDto loginDto) {
         User user = userRepository.findByUsername(loginDto.getUsername())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 아이디"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         if(!passwordEncoder.matches(loginDto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("비밀번호가 일치하지 않음");
+            throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 
         String token = jwtTokenProvider.createToken(String.valueOf(user.getId()));
@@ -48,11 +50,11 @@ public class UserController {
     사용자가 보낸 정보(ID/PW)인 JSON 문자열을 @RequestBody가 LoginDto로 DTO 객체로 변환
 
     userRepository의 findByUsername메서드를 DTO 객체의 Username을 매개변수로 하여 DB에서 유저 조회
-    만약 유저 없으면 RuntimeException 발생
+    만약 유저 없으면 자동으로 GlobalExceptionHandler가 처리
 
     loginDto.getPassword()는 사용자가 입력한 PW이고 user.getPassword()는 DB에 저장된 암호화된 PW
     passwordEncoder.matches()는 내부적으로 사용자가 입력한 PW를 암호화해보고
-    그 결과가 DB에 있는 암호화된 값과 같은지 확인하고 아니면 RuntimeException 발생
+    그 결과가 DB에 있는 암호화된 값과 같은지 확인하고 아니면 CustomException 발생
 
     유저의 기본키(ID)를 가지고 jwtTokenProvider의 createToken메서드를 호출해서 토큰 객체 생성
 
@@ -66,7 +68,7 @@ public class UserController {
     @PostMapping("/signup")
     public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
         if(userRepository.findByUsername(request.getUsername()).isPresent()) {
-            return ResponseEntity.badRequest().body("이미 존재하는 아이디입니다");
+            throw new CustomException(ErrorCode.DUPLICATE_USERNAME);
         }
 
         User user = new User(

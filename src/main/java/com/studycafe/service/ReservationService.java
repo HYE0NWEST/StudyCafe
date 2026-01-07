@@ -13,6 +13,8 @@ import com.studycafe.dto.SeatStatusDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.studycafe.global.exception.CustomException;
+import com.studycafe.global.exception.ErrorCode;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,7 +34,7 @@ public class ReservationService {
         boolean hasActive = reservationRepository
                 .existsActiveReservation(userId,LocalDateTime.now());
         if(hasActive) {
-            throw new RuntimeException("이미 이용중인 좌석이 있습니다");
+            throw new CustomException(ErrorCode.SEAT_ALREADY_OCCUPIED);
         }
 
         boolean isLocked = redisLockService
@@ -40,11 +42,12 @@ public class ReservationService {
                         String.valueOf(seatNumber), String.valueOf(userId));
 
         if(!isLocked) {
-            throw new RuntimeException("이미 선택된 좌석입니다");
+            throw new CustomException(ErrorCode.SEAT_ALREADY_LOCKED);
         }
 
         return "좌석 " + seatNumber + "번을 5분간 선점했습니다";
     }
+    //region
     /* 좌석 선점 메서드(좌석 클릭 시 실행됨, Redis에 찜만 해두는 단계)
     DB에 INSERT 하기 전에 Redis를 먼저 거치는 과정 수행
     reservationRepository의 existsActiveReservation을 호출하여
@@ -59,20 +62,21 @@ public class ReservationService {
     만약 false(이미 다른 사람이 선점함)면 에러 메시지 전송
     만약 true면 좌석번호와 함께 성공 메시지 전송
      */
+    //endregion
 
     @Transactional // 에러 발생 시 없던 일로 롤백하여 데이터 안전하게 보관
     public Long confirmReservation(Long userId, Integer seatNumber, int hours) {
         String lockOwner = redisLockService.getLockOwner(String.valueOf(seatNumber));
 
         if(lockOwner == null || !lockOwner.equals(String.valueOf(userId))) {
-            throw new RuntimeException("좌석 선점 시간이 만료되었거나 본인의 선점이 아닙니다");
+            throw new CustomException(ErrorCode.INVALID_LOCK);
         }
 
         User user = userRepository.findById(userId) // 사용자 정보 조회
-                .orElseThrow(() -> new RuntimeException("유저 없음"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Seat seat = seatRepository.findBySeatNumber(seatNumber) // 좌석 정보 조회
-                .orElseThrow(() -> new RuntimeException("좌석 없음"));
+                .orElseThrow(() -> new CustomException(ErrorCode.SEAT_NOT_FOUND));
 
         Reservation reservation = new Reservation( // 예약 엔티티 생성(JAVA객체)
                 user, // 유저
@@ -164,7 +168,7 @@ unlockSeat : Redis의 역할이  종료되었으므로 Redis를 청소하고 락
     public void endUse(Long userId) {
         Reservation reservation = reservationRepository
                 .findActiveReservation(userId, LocalDateTime.now())
-                .orElseThrow(() -> new RuntimeException("현재 이용중인 예약이 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
             reservation.cancel();
     }
