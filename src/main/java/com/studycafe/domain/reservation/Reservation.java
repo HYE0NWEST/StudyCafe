@@ -15,17 +15,31 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "reservations", indexes = {
-        @Index(name = "idx_seat_time", columnList = "seat_id, start_time"),
-        @Index(name = "idx_start_time", columnList = "start_time")
+        @Index(
+                name = "idx_seat_time",
+                columnList = "seat_id, start_time"),
+        @Index(
+                name = "idx_user_status_end",
+                columnList = "user_id, status, end_time"),
+        @Index(
+                name = "idx_status_end",
+                columnList = "status, end_time")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 /*
-idx_seat_time : seat_id + start_time
-특정 좌석(seat_id)이 특정 시간(start_time)에 이미 예약 되어 있는지 확인할 때 사용(중복 예약 방지)
+1. 좌석 중복 예약 방지용
+특정 좌석(seat_id)이 특정 시간(start_time)에 예약되어있는지 확인
 
-idx_start_time : start_time
-시간순으로 조회할 때 속도를 높여 줌
+2. 유저의 현재 이용중인 예약 조회용
+이 유저(user_id)가 지금 이용중(CONFIRMED+end_time)인가를 조회
+이 인덱스는 existsActiveReservation을 최적화(속도개선)
+해당 유저의 CONFIRMED 상태 예약 중에서 시간이 남은 데이터가 있는지만 즉시 확인
+
+3. 스케줄러 자동 퇴실 처리용
+이용중(CONFIRMED)인데 시간 끝난(end_time)거 다 찾음
+updateExpiredReservations 메서드를 최적화(속도개선)
+CONFIRMED 목록으로 바로 점프해서 시간순으로 정렬된 데이터 중 만료된 건만 뽑음
  */
 public class Reservation {
     @Id

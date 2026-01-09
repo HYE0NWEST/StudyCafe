@@ -40,6 +40,7 @@ public enum ErrorCode {
 >> + 2명의 사용자가 동시에 한 자리를 예약하려고 할 때
 서버 에러(500) : INTERVAL_SERVER_ERROR
 
+
 필드(저장하는 값)
 status는 컴퓨터(브라우저)가 알아들을 수 있는 HTTP 상태코드(ex. 404,400)
 message는 사용자(사람)에게 보여줄 설명

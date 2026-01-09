@@ -6,6 +6,7 @@ package com.studycafe.service;
 import com.studycafe.domain.reservation.ReservationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,12 @@ public class ReservationScheduler {
     // 의존성 주입
     
     @Scheduled(fixedDelay = 60000)
-    @Transactional // 이전에 에러가 나면 취소(롤백)하거나 안전하게 Commit하기 위해 트랜잭션을 검
+    @Transactional // 트랜잭션 선언
+    @SchedulerLock(
+            name = "AutoCheckOut_Lock",
+            lockAtLeastFor = "50s",
+            lockAtMostFor = "59s"
+    )
     public void autoCheckOut() {
         LocalDateTime now = LocalDateTime.now(); // 현재 시간 불러오고 now에 저장
 
@@ -34,7 +40,6 @@ public class ReservationScheduler {
         }
         // 변경된 건이 있는 로그 기록이 있으면 실행(updatedCount가 1 이상이면)
     }
-}
 /*
 @Scheduled(fixedDelay = 60000) : 60000ms(1분)마다 자동으로 실행
 fixedDelay는 앞의 작업이 다 끝나고 나서 1분을 쉬게 됨
@@ -46,5 +51,11 @@ ReservationRepository의 updateExpiredReservation메서드에 현재 시간을 �
 
 스케줄러는 1분마다 돌으므로 만료된 사람만 로그를 찍도록 하여 쓸데없는 내용 로그 방지
 >> Log Spamming, 중요한 기록은 못볼 수 있게 됨
-
  */
+
+
+
+
+
+}
+

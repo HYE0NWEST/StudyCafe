@@ -1,5 +1,6 @@
 package com.studycafe.domain.reservation;
 
+import com.studycafe.domain.seat.Seat;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -84,13 +85,23 @@ Reservation테이블에서 조건에 맞는 예약 데이터가 1개 이상이�
             @Param("userId") Long userId,
             @Param("now") LocalDateTime now
     );
-    /* 특정 사용자(userId)가 현재 이용중인 예약 정보를 가져오는 쿼리
-    Reservation 테이블의 모든정보(ID,좌석번호,시작시간,종료시간)에서
-    특정 사용자(userId) + 현재 이용중 + 현재 상태(CONFIRMED)인 것만 가져옴
+ /* 특정 사용자(userId)가 현재 이용중인 예약 정보를 가져오는 쿼리
+      Reservation 테이블의 모든정보(ID,좌석번호,시작시간,종료시간)에서
+      특정 사용자(userId) + 현재 이용중 + 현재 상태(CONFIRMED)인 것만 가져옴
 
-    없을 수도 있으므로 Optional로 반환받음
-    Optional<Reservation>은 상자로 상자 안에 예약 정보가 있을 수도 없을 수도
-     */
+      없을 수도 있으므로 Optional로 반환받음
+      Optional<Reservation>은 상자로 상자 안에 예약 정보가 있을 수도 없을 수도
+       */
+     boolean existsBySeatAndStatus(
+             Seat seat,
+             Reservation.ReservationStatus status
+     );
+/*
+JPA의 쿼리 메서드 기능으로 이름만으로 자동으로 쿼리 생성됨
+exists(데이터 존재하는지 확인,boolean 반환)
+BySeat(seat 컬럼을 기준으로)
+AndStatus(status 컬럼을 기준으로)
+ */
 }
 
 
