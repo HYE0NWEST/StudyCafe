@@ -32,6 +32,7 @@ public class ReservationController {
     /* 좌석 선점 요청(/pre-occupy) : 사용자가 좌석을 클릭했을 때 호출되는 API
     ResponseEntity<String> : 글자와 함께 HTTP 상태코드를 같이 조절해서 보내주는 포장지 역할
     @RequestBody : 사용자가 보낸 JSON데이터 객체를 JAVA 객체(PreOccupyRequest)로 변환
+    @Valid는 Reservation에서 만든 규칙이 제대로 되어있는지 검사
 
     Service에게 Redis로 가서 선점 요청을 시킴
     Redis에서 좌석 선점 요청을 한 결과를 result에 저장

@@ -67,6 +67,9 @@ public class ReservationService {
    삭제해두면 다음에 누군가 조회를 요청했을 때(@Cacheable) 캐시가 비어있으니
    다시 DB에서 최신 정보를 가져와서 Redis에 채워 넣게 됨
 
+   userId,seatNumber가 null이거나 seatNumber가 음수이면 입력값 오류이므로
+   입력값 오류 CustomException 에러 메시지 발생
+
     DB에 INSERT 하기 전에 Redis를 먼저 거치는 과정 수행
     reservationRepository의 existsActiveReservation을 호출하여
     만약 hasActive가 true이면 1인 1좌석을 어기므로 에러 메시지 발생
@@ -139,6 +142,10 @@ public class ReservationService {
         }
     }
 /*
+0. 입력값 검사
+userId,seatNumber가 null이거나 seatNumber가 음수이면 입력값 오류이므로
+입력값 오류 CustomException 에러 메시지 발생
+
 1. 락 갱신
 redisLockService의 refreshLock 메서드를 좌석번호, ID를 넣고 호출하여
 현재 좌석 주인과 지금 들어온 유저와 같은지 refreshed에 저장
@@ -242,6 +249,10 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
 
     1. DB에서 정보를 가져오기
     Seat 테이블에서 모든 좌석 정보를 가져와서 allSeats 리스트에 저장
+
+    allSeats리스트가 비어있으면 좌석 정보가 없다는 에러를 발생하고
+    새로운 빈 리스트 생성 >> 프론트엔드가 비어있음을 확인하고 에러 발생
+
     Reservation 테이블에서 시작 시간과 종료 시간 사이에 지금 시간이 포함된 예약들을
     가져와서(OCCUPIED) activeReservations 리스트에 저장
 
@@ -255,6 +266,9 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
     4. redis 락 정보 받아오기
     redisLockService의 getLockOwners를 호출하여 현재 결제 진행중(락이 걸린)
     좌석 정보를 redis와 딱 1번 통신으로 받아오고 Map형태의 lockedSeats에 저장
+
+    만약 lockedSeats가 비어있다면 좌석 정보가 없다는 에러를 발생시키고
+    새로운 빈 Map을 생성 >> 프론트엔드가 비어있음을 확인하고 에러 발생
 
     5. 결과를 담을 빈 리스트 생성
     statusList라는 빈 리스트 생성

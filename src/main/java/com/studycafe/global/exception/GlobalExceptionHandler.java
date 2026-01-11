@@ -15,7 +15,7 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<ErrorResponse> handleCustomException(CustomException e) {
         return ErrorResponse.toResponseEntity(e.getErrorCode());
     }
-    /* 내가 만든 에러(CustomExceptino) 처리
+    /* 내가 만든 에러(CustomExceptin) 처리
     @ExceptionHandler는 CustomException이 터지면 이 메서드로 부름
     의도적으로 throw new CustomException을 했을 때 실행되고
     내가 정한 메시지가 반환됨
@@ -42,9 +42,13 @@ public class GlobalExceptionHandler {
                         .build()
                 );
     }
-    /* @Valid 어노테이션을 사용한 유효성 검사가 실패했을 때 에러 처리
-    @ExceptionHandler를 통해 @Email 등 DTO 검증에 실패했을 때 이 메서드로 이동
+    /*
+    @ExceptionHandler는 Controller에서 @Valid검사를 했는데 이상한 값을 보내서
+    MethodArgumentNotValidException이 발생했을 때만 스프링이 이 메서드 호출
 
+    일단 왜 에러가 났는지 모르므로 입력값이 올바르지 않다고 message를 저장
+
+    만약 에러가 난게 맞다면(null이 아니라면)
     getBindingResult()를 통해서 검사 결과표를 가져오고
     getFieldError()를 통해서 틀린 필드 1개를 가져오고
     getDefaultMessage()를 통해서 DTO에 적어둔 1번째(ex. message)속성값을 가져옴

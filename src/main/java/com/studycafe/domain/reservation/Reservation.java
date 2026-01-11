@@ -28,6 +28,12 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 /*
+ 파라미터가 없는 기본 생성자 생성, 이때 PROTECTED를 하는 이유는 public으로
+ 열어두면 개발자가 실수로 텅 빈 객체를 생성할 수 있어 JPA만 쓰고 개발자는
+ 직접 호출하지 않게 설정
+ */
+
+/*
 1. 좌석 중복 예약 방지용
 특정 좌석(seat_id)이 특정 시간(start_time)에 예약되어있는지 확인
 
@@ -43,7 +49,7 @@ CONFIRMED 목록으로 바로 점프해서 시간순으로 정렬된 데이터 �
  */
 public class Reservation {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)//DB에 PK생성 위임
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

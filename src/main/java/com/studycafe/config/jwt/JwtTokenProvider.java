@@ -54,6 +54,8 @@ public class JwtTokenProvider {
        @PostContruct는 스프링이 JwtTokenProvider 객체를 생성하고 @Value에 있는 변수들을
        다 채워 넣은 직후에 자동으로 실행 >> 안전하게 초기화 작업 수행 가능
 
+       secretKey가 null이거나 너무 짧은 경우 에러 발생
+
         application.yml에서 가져온 tokenValidTime에 1000L을 곱하여 밀리초 단위를 사용하게 하고
         L은 Long타입을 의미하여 int 범위를 벗어나도 오버플로우가 발생하지 않게 함
 

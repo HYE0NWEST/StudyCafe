@@ -53,6 +53,8 @@ Redis 명령어인 SETNX를 실행 : 이 key(seat_lock:10)이 없을 때만 데�
 저장하지 않고 false를 반환
 SETNX : SET if not exists(없으면 저장해라)
 
+
+
 Duration.ofMinutes(5)
 서버가 락을 걸어놓고 락을 영원히 못 풀면 영구적으로 예약 불가 상태이므로 이를 방지함
 
@@ -97,6 +99,10 @@ Redis에서 key라는 사물함을 열어서 안에 이름표가 어떻게 되�
 만약 본인이 맞다면 추가로 5분을 더 연장
 이로써 DB 저장 직전에 락이 풀리는 상황 방지함
 
+4. Redis 에러
+만약 Redis 서버가 갑자기 오류가 나면 에러 메시지와 함께 false를 리턴해서
+락 획득 실패라고 컨트롤러에게 알림
+
 ! 추가
 redisTemplate는 스프링이 제공하는 Redis 리모컨으로 자바 객체를 Redis가 이해할 수
 있는 데이터로 변환해서 통신을 대신 제공
@@ -129,6 +135,9 @@ redisTemplate는 스프링이 제공하는 Redis 리모컨으로 자바 객체�
 /*
 좌석 잠금 해제
 해당 key를 Redis에서 delete 처리하여 다른 사람이 다시 lockSeat을 시도할 때 성공하게 함
+
+만약 Redis락을 풀려고 하는데 락이 응답이 없다면
+어차피 락은 5분(TTL)뒤에 알아서 사라지므로 큰 문제가 생기지 않아 로그만 남김
  */
 
     public Map<Integer, String> getLockOwners(List<Integer> seatNumbers) {
@@ -180,6 +189,12 @@ result의 크기만큼 for문을 돌려서 results의 내용을 result 변수에
 
 4. 반환
 {3 = "userA", 10 = "userB"}의 형태로 변환된 lockMap을 반환
+
+5. Redis 에러
+만약 좌석표를 로딩하는데 Redis가 죽었다면
+여기서 에러가 터지면 메인 페이지가 모두 죽으므로 새로운 Map을 리턴하여
+잠금 정보가 없는 상태로 로직이 진행됨
+사용자는 좌석표를 볼 수 있고 적어도 서비스 접속 자체는 가능하게 함
  */
 
 
