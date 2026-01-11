@@ -25,11 +25,18 @@ public class RedisLockService {
     public boolean lockSeat(String seatNumber, String userId) {
         String key = "seat_lock:" + seatNumber;
 
-        return Boolean.TRUE.equals(
-                redisTemplate
-                        .opsForValue()
-                        .setIfAbsent(key,userId, Duration.ofMinutes(5))
-        );
+        try {
+            return Boolean.TRUE.equals(
+                    redisTemplate
+                            .opsForValue()
+                            .setIfAbsent(key, userId, Duration.ofMinutes(5))
+            );
+        } catch (Exception e) {
+            log.error("Redis 락 설정 중 오류 발생 - Seat: {}, User: {}, Error: {}", 
+                    seatNumber, userId, e.getMessage());
+            // Redis 오류 시 false 반환하여 예약 실패 처리
+            return false;
+        }
     }
 /* 좌석 잠금
 String key = "seat_lock: + seatNumber;
@@ -62,15 +69,19 @@ Redis는 이미 key seat_lock:1이 이미 있으므로 false를 리턴 >> 오류
 
     public boolean refreshLock(String seatNumber, String userId) {
         String key = "seat_lock:" + seatNumber;
-        String currentOwner = redisTemplate.opsForValue().get(key);
-        if (userId.equals(currentOwner)) {
-            return Boolean
-                    .TRUE
-                    .equals(
-                            redisTemplate.expire(key, Duration.ofMinutes(5))
-                    );
+        try {
+            String currentOwner = redisTemplate.opsForValue().get(key);
+            if (userId.equals(currentOwner)) {
+                return Boolean.TRUE.equals(
+                        redisTemplate.expire(key, Duration.ofMinutes(5))
+                );
             }
             return false;
+        } catch (Exception e) {
+            log.error("Redis 락 갱신 중 오류 발생 - Seat: {}, User: {}, Error: {}", 
+                    seatNumber, userId, e.getMessage());
+            return false;
+        }
     }
 /* 락 연장
 1. 키 생성 및 검문 검색
@@ -107,7 +118,13 @@ redisTemplate는 스프링이 제공하는 Redis 리모컨으로 자바 객체�
 
     public void unlockSeat(String seatNumber) {
         String key = "seat_lock:" + seatNumber;
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            log.error("Redis 락 해제 중 오류 발생 - Seat: {}, Error: {}", 
+                    seatNumber, e.getMessage());
+            // 예외를 다시 던지지 않고 로그만 남김 (이미 예약이 완료된 경우 락 해제 실패해도 큰 문제 없음)
+        }
     }
 /*
 좌석 잠금 해제
@@ -115,24 +132,30 @@ redisTemplate는 스프링이 제공하는 Redis 리모컨으로 자바 객체�
  */
 
     public Map<Integer, String> getLockOwners(List<Integer> seatNumbers) {
-        List<Object> results = redisTemplate.executePipelined(
-                (RedisCallback<Object>) connection -> {
-                    for(Integer seatNum : seatNumbers) {
-                        String key = "seat_lock:" + seatNum;
-                        connection.get(key.getBytes());
+        try {
+            List<Object> results = redisTemplate.executePipelined(
+                    (RedisCallback<Object>) connection -> {
+                        for(Integer seatNum : seatNumbers) {
+                            String key = "seat_lock:" + seatNum;
+                            connection.get(key.getBytes());
+                        }
+                        return null;
                     }
-                    return null;
-                }
-        );
+            );
 
-        Map<Integer, String> lockMap = new HashMap<>();
-        for(int i = 0; i < results.size(); i++) {
-            Object result = results.get(i);
-            if(result != null) {
-                lockMap.put(seatNumbers.get(i), result.toString());
+            Map<Integer, String> lockMap = new HashMap<>();
+            for(int i = 0; i < results.size(); i++) {
+                Object result = results.get(i);
+                if(result != null) {
+                    lockMap.put(seatNumbers.get(i), result.toString());
+                }
             }
+            return lockMap;
+        } catch (Exception e) {
+            log.error("Redis 파이프라인 조회 중 오류 발생: {}", e.getMessage());
+            // 오류 시 빈 맵 반환
+            return new HashMap<>();
         }
-        return lockMap;
     }
 /* 좌석 100개의 락 정보를 한번에 가져오는 메서드
 Redis에게 100번 질문하는 것이 아닌 1번만 왔다갔다 하는 방식(Redis Pipelining)

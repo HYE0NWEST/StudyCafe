@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/studycafe?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root      # 본인 ID
-    password: ${DB_PASSWORD}     # 본인 PW
+    password: ${DB_PASSWORD}    # 환경변수가 없으면 기본값 사용 (로컬 개발용)
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -19,8 +19,15 @@ spring:
     redis:
       host: localhost
       port: 6379
+      timeout: 2000ms # 연결 타임아웃 설정
 
 jwt:
   # 환경변수 JWT_SECRET이 있으면 그걸 쓰고, 없으면 뒤에 있는 임시값을 씁니다.
-  secret: ${JWT_SECRET}
+  # ⚠️ 프로덕션에서는 반드시 환경변수로 설정하세요!
+  secret: ${JWT_SECRET:your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm}
   access-token-validity-in-seconds: 1800 # 30분 (60초 * 30분)
+
+# 애플리케이션 설정
+app:
+  seat:
+    total-count: 100 # 총 좌석 수 (초기화 시 생성될 좌석 개수)

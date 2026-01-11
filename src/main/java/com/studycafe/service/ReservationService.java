@@ -12,6 +12,8 @@ import com.studycafe.domain.user.UserRepository;
 import com.studycafe.dto.SeatStatusDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.studycafe.global.exception.CustomException;
@@ -19,6 +21,7 @@ import com.studycafe.global.exception.ErrorCode;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,7 +36,12 @@ public class ReservationService {
     private final UserRepository userRepository; // 유저 조회
     private final RedisLockService redisLockService; // 분산 락 관리
 
+    @CacheEvict(value = "seatStatus", key = "'all'")
     public String preOccupySeat(Long userId, Integer seatNumber) {
+        // 입력값 검증
+        if (userId == null || seatNumber == null || seatNumber <= 0) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
 
        log.info("좌석 선점 요청 - User: {}, Seat: {}", userId, seatNumber);
         boolean hasActive = reservationRepository
@@ -53,8 +61,12 @@ public class ReservationService {
 
         return "좌석 " + seatNumber + "번을 5분간 선점했습니다.";
     }
-    //region
     /* 좌석 선점 메서드(좌석 클릭 시 실행됨, Redis에 찜만 해두는 단계)
+   @CacheEvict(캐시 삭제) - 데이터가 변경되었으니 캐시에 있는 옛 데이터 삭제
+   이 메서드 실행 시 Redis에서 seatStatus:all 데이터를 강제로 삭제(Evict)
+   삭제해두면 다음에 누군가 조회를 요청했을 때(@Cacheable) 캐시가 비어있으니
+   다시 DB에서 최신 정보를 가져와서 Redis에 채워 넣게 됨
+
     DB에 INSERT 하기 전에 Redis를 먼저 거치는 과정 수행
     reservationRepository의 existsActiveReservation을 호출하여
     만약 hasActive가 true이면 1인 1좌석을 어기므로 에러 메시지 발생
@@ -68,10 +80,13 @@ public class ReservationService {
     만약 false(이미 다른 사람이 선점함)면 에러 메시지 전송
     만약 true면 좌석번호와 함께 성공 메시지 전송
      */
-    //endregion
-
+    @CacheEvict(value = "seatStatus", key = "'all'")
     @Transactional // 트랜잭션으로 선언
     public Long confirmReservation(Long userId, Integer seatNumber, int hours) {
+        // 입력값 검증
+        if (userId == null || seatNumber == null || seatNumber <= 0 || hours <= 0) {
+            throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        }
 
         boolean refreshed = redisLockService.refreshLock(
                 String.valueOf(seatNumber),
@@ -165,10 +180,15 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
 만약 없다면 사용자는 튕겨져 나가도 Redis 락은 그대로 유지하게 됨
  */
 
-
+    @Cacheable(value = "seatStatus", key = "'all'", cacheManager = "cacheManager")
     public List<SeatStatusDto> getAllSeatStatus() {
 
         List<Seat> allSeats = seatRepository.findAll();
+        
+        if (allSeats.isEmpty()) {
+            log.warn("좌석 데이터가 없습니다. SeatInitializer가 정상적으로 실행되었는지 확인하세요.");
+            return new ArrayList<>();
+        }
 
         List<Reservation> activeReservations =
                reservationRepository.findActiveReservations(LocalDateTime.now());
@@ -183,7 +203,14 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
                .map(Seat::getSeatNumber)
                .toList();
 
-       Map<Integer,String> lockedSeats = redisLockService.getLockOwners(seatNums);
+       Map<Integer,String> lockedSeats;
+       try {
+           lockedSeats = redisLockService.getLockOwners(seatNums);
+       } catch (Exception e) {
+           log.error("Redis에서 락 정보를 가져오는 중 오류 발생: {}", e.getMessage());
+           // Redis 오류 시 빈 맵으로 처리하여 서비스는 계속 동작
+           lockedSeats = new HashMap<>();
+       }
 
        List<SeatStatusDto> statusList = new ArrayList<>();
 
@@ -202,6 +229,17 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
         return statusList; // 상태가 저장된 리스트 리턴
     }
     /* 현재 전체 좌석 현황판, DB와 Redis를 모두 확인해서 각 좌석의 상태 종합
+    0. 어노테이션(캐시 저장 및 조회)
+     @Cacheable...은 데이터가 캐시에 있으면 DB에 가지 않고 바로 주고
+    없으면 DB갔다가 캐시에 저장하라는 의미 >> 데이터 정합성 유지
+    value는 Redis에 저장될 그룹 이름이고 key는 데이터의 식별자(파일이름)
+    cacheManager는 RedisConfig에 있는 cacheManager 설정 사용(5분만료)
+
+    seatStatus(value)::all(key)이라는 키에 데이터가 존재하는지 확인
+    >> 모든 좌석 상태가 담긴 JSON 데이터
+    존재하면 Redis에 있던 데이터를 즉시 반환(메서드 실행하지 않음)
+    존재하지 않으면 메서드 실행(DB 조회)
+
     1. DB에서 정보를 가져오기
     Seat 테이블에서 모든 좌석 정보를 가져와서 allSeats 리스트에 저장
     Reservation 테이블에서 시작 시간과 종료 시간 사이에 지금 시간이 포함된 예약들을
@@ -237,7 +275,7 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
     7. 완성된 전체 좌석 현황표를 프론트엔드로 전송
      */
 
-
+    @CacheEvict(value = "seatStatus", key = "'all'")
     public void cancelPreOccupy(Integer seatNumber) {
         redisLockService.unlockSeat(String.valueOf(seatNumber)); // Redis 락 해제
     }
@@ -284,6 +322,7 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
        원래의 양 많은 Reservation객체를 좌석번호(Integer)만 남게하고 반환함
        .orElse()는 만약 상자가 비어있으면 그냥 null을 반환함
      */
+
 
 
 }

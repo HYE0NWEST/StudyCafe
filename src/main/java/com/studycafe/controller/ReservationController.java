@@ -6,6 +6,7 @@ package com.studycafe.controller;
 import com.studycafe.dto.ReservationDto;
 import com.studycafe.dto.SeatStatusDto;
 import com.studycafe.service.ReservationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,7 +23,7 @@ public class ReservationController {
     // 좌석 선점(임시 점유) API
     @PostMapping("/pre-occupy") // POST /api/reservations/pre-occupy
     public ResponseEntity<String> preOccupySeat(
-            @RequestBody ReservationDto.PreOccupyRequest request) {
+            @RequestBody @Valid ReservationDto.PreOccupyRequest request) {
 
             String result = reservationService
                     .preOccupySeat(request.getUserId(), request.getSeatNumber());
@@ -45,7 +46,7 @@ public class ReservationController {
     // 예약 확정(결제 후 DB 저장) API
     @PostMapping("/confirm") // POST /api/reservations/confirm
     public ResponseEntity<String> confirmReservation(
-            @RequestBody ReservationDto.ReserveRequest request) {
+            @RequestBody @Valid ReservationDto.ReserveRequest request) {
 
             Long reservationId = reservationService.confirmReservation(
                     request.getUserId(),
@@ -86,7 +87,7 @@ ResponseEntity는 HTTP응답을 감싸는 포장지 역할로 데이터와 함�
     // 취소 시 즉시 락 해제 요청 API
     @PostMapping("/cancel") // POST /api/reservations/cancel
     public ResponseEntity<String> cancelPreOccupy(
-            @RequestBody ReservationDto.PreOccupyRequest request) {
+            @RequestBody @Valid ReservationDto.PreOccupyRequest request) {
 
         reservationService.cancelPreOccupy(request.getSeatNumber());
         return ResponseEntity.ok("선점 취소되었습니다.");
@@ -98,7 +99,7 @@ Redis에서 해당 좌석의 키가 즉시 삭제되어 다른 사용자가 즉�
 
     @PostMapping("/end-use")
     public ResponseEntity<String> endUse(
-            @RequestBody ReservationDto.PreOccupyRequest request) {
+            @RequestBody @Valid ReservationDto.PreOccupyRequest request) {
         reservationService.endUse(request.getUserId());
         return ResponseEntity.ok("이용이 종료되었습니다");
     }
@@ -111,7 +112,13 @@ Redis에서 해당 좌석의 키가 즉시 삭제되어 다른 사용자가 즉�
     @GetMapping("/my-seat")
     public ResponseEntity<Integer> getMySeat(
             @AuthenticationPrincipal String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
         Integer seatNumber = reservationService.getCurrentSeatNumber(Long.parseLong(userId));
+        if (seatNumber == null) {
+            return ResponseEntity.noContent().build();
+        }
         return ResponseEntity.ok(seatNumber);
     }
     /* 이 유저의 좌석 번호를 알아보게 하는 역할

@@ -27,7 +27,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
 
-        String message = e.getBindingResult().getFieldError().getDefaultMessage();
+        String message = "입력값이 올바르지 않습니다.";
+        if (e.getBindingResult().getFieldError() != null) {
+            message = e.getBindingResult().getFieldError().getDefaultMessage();
+        }
 
         return ResponseEntity
                 .status(ErrorCode.INVALID_INPUT_VALUE.getStatus())

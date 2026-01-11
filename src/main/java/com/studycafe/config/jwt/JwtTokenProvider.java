@@ -35,6 +35,16 @@ public class JwtTokenProvider {
 
     @PostConstruct
     protected void init() {
+        // JWT Secret Key 검증
+        if (secretKey == null || secretKey.trim().isEmpty()) {
+            throw new IllegalStateException("JWT Secret Key가 설정되지 않았습니다. application.yml 또는 환경변수 JWT_SECRET을 확인하세요.");
+        }
+        
+        // HS256 알고리즘은 최소 256비트(32바이트)의 키가 필요합니다
+        if (secretKey.length() < 32) {
+            log.warn("JWT Secret Key가 너무 짧습니다. 최소 32자 이상을 권장합니다. (현재: {}자)", secretKey.length());
+        }
+
         this.tokenValidTime = this.tokenValidTime * 1000L;
 
         byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
