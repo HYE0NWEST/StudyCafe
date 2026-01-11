@@ -34,6 +34,7 @@ public class ReservationService {
     private final RedisLockService redisLockService; // 분산 락 관리
 
     public String preOccupySeat(Long userId, Integer seatNumber) {
+
        log.info("좌석 선점 요청 - User: {}, Seat: {}", userId, seatNumber);
         boolean hasActive = reservationRepository
                 .existsActiveReservation(userId,LocalDateTime.now());
@@ -50,7 +51,7 @@ public class ReservationService {
             throw new CustomException(ErrorCode.SEAT_ALREADY_LOCKED);
         }
 
-        return "좌석 " + seatNumber + "번을 5분간 선점했습니다";
+        return "좌석 " + seatNumber + "번을 5분간 선점했습니다.";
     }
     //region
     /* 좌석 선점 메서드(좌석 클릭 시 실행됨, Redis에 찜만 해두는 단계)
@@ -71,6 +72,7 @@ public class ReservationService {
 
     @Transactional // 트랜잭션으로 선언
     public Long confirmReservation(Long userId, Integer seatNumber, int hours) {
+
         boolean refreshed = redisLockService.refreshLock(
                 String.valueOf(seatNumber),
                 String.valueOf(userId)
@@ -283,23 +285,5 @@ finally를 통해서 에러가 나도 락을 반납하여 다른 사용자가 �
        .orElse()는 만약 상자가 비어있으면 그냥 null을 반환함
      */
 
-    // 테스트 용
-    // [포트폴리오용] Redis 락 없이 예약하는 위험한 메서드 (동시성 이슈 재현용)
-    @Transactional
-    public void unsafePreOccupySeat(Long userId, Integer seatNumber) {
-        // 1. DB에서 예약 확인 (락 없이 단순 조회)
-        boolean hasActive = reservationRepository
-                .existsActiveReservation(userId, LocalDateTime.now());
 
-        // 2. 이미 예약이 있어도 동시 요청이 들어오면 여기서 다 통과해버림 (Race Condition)
-        if (hasActive) {
-            throw new CustomException(ErrorCode.SEAT_ALREADY_OCCUPIED);
-        }
-
-        // 3. 검증 없이 바로 저장 (원래는 이러면 안 됨!)
-        // (테스트를 위해 억지로 예약을 만드는 로직)
-        // 실제로는 Reservation 객체를 만들어서 save 해야 하지만,
-        // 여기서는 흐름만 보여주기 위해 로그만 찍거나 간단히 처리해도 됨.
-        // 하지만 테스트 증명을 위해 실제 저장을 시도하는 로직을 가정함.
-    }
 }

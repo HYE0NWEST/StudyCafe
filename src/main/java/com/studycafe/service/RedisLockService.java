@@ -3,6 +3,8 @@
  */
 package com.studycafe.service;
 
+import com.studycafe.global.exception.CustomException;
+import com.studycafe.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisCallback;
@@ -60,18 +62,15 @@ Redis는 이미 key seat_lock:1이 이미 있으므로 false를 리턴 >> 오류
 
     public boolean refreshLock(String seatNumber, String userId) {
         String key = "seat_lock:" + seatNumber;
-
         String currentOwner = redisTemplate.opsForValue().get(key);
-
-        if(userId.equals(currentOwner)) {
+        if (userId.equals(currentOwner)) {
             return Boolean
                     .TRUE
                     .equals(
                             redisTemplate.expire(key, Duration.ofMinutes(5))
                     );
-        }
-
-        return false;
+            }
+            return false;
     }
 /* 락 연장
 1. 키 생성 및 검문 검색

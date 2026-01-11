@@ -46,10 +46,11 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
+                .csrf(csrf -> csrf.disable()) // csrf 보호 비활성화
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // CORS 규칙 적용
 
-                .csrf(AbstractHttpConfigurer::disable) // CSRF 보호 비활성화
+
                 .formLogin(AbstractHttpConfigurer::disable) // 폼 로그인 비활성화
                 .httpBasic(AbstractHttpConfigurer::disable) // 기본 로그인 비활성화
 
@@ -59,9 +60,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth ->
                         auth
-                        .requestMatchers("/api/auth/**", "/v3/api-docs/**",
-                                "/swagger-ui/**",
-                                "/swagger-ui.html").permitAll()
+                        .requestMatchers("/api/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
